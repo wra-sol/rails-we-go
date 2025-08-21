@@ -5,13 +5,17 @@ FROM ubuntu:22.04
 # Non-interactive apt
 ENV DEBIAN_FRONTEND=noninteractive
 
-# Install SSH, curl, git, and minimal tools
+# Prepare data volume for persistence
+VOLUME ["/data"]
+
+# Install SSH, curl, git, unzip (unzip added for installer compatibility), and minimal tools
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
         openssh-server \
         curl \
         ca-certificates \
         git \
+        unzip \
         nano \
         locales \
     && rm -rf /var/lib/apt/lists/* \
@@ -21,8 +25,6 @@ RUN apt-get update \
 RUN useradd -m -s /bin/bash deploy \
     && echo 'deploy ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
 
-# SSH config: listen on port 22, passwordless, no root login (we'll harden at bootstrap)
-RUN mkdir -p /var/run/sshd
 EXPOSE 22 3000
 
 # Bootstrap at startup
@@ -35,10 +37,13 @@ COPY package.json /home/deploy/package.json
 
 WORKDIR /home/deploy
 
-# Install Node.js (setup 18.x) in bootstrap or here
+# Node setup (still installs at build time)
 RUN curl -fsSL https://deb.nodesource.com/setup_18.x | bash - \
     && apt-get install -y nodejs \
-    && npm install --only=prod --prefix /home/deploy
+    && npm install --prefix /home/deploy
 
-# SSH server should run in front; start script serves as entrypoint
+# Ensure the bootstrap handles opencode installation once
+ENV OPENCODE_INSTALLED_FLAG /data/.opencode_installed
+
+# Start bootstrap
 CMD ["/bootstrap.sh"]
