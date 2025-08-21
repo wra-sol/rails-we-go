@@ -15,6 +15,19 @@ A minimal Ubuntu-based VPS container with an SSH endpoint and a tiny Node.js app
   - Harden SSH (no password login, no root login)
   - Start SSH and the Node.js app
 
+## Persistence with Railway Volumes
+Railway volumes are mounted at runtime and accessed inside the container at a path you configure via environment variables.
+- Use:
+  - RAILWAY_VOLUME_MOUNT_PATH to specify the mount point inside the container (default: /data)
+  - RAILWAY_VOLUME_NAME (optional, for volume identification in Railway)
+- The app and bootstrap now use the path you configure as the persistence directory.
+- To enable SSH and opencode boot, supply SECRET_DEPLOY_SSH_KEY as a secret in Railway (public key content).
+
+### Environment configuration (Railway)
+- RAILWAY_VOLUME_MOUNT_PATH=/data
+- RAILWAY_VOLUME_NAME=your-volume-name
+- SECRET_DEPLOY_SSH_KEY="<your-public-key>"
+
 ## Project structure
 - Dockerfile: Docker image definition
 - bootstrap.sh: Startup bootstrap to configure SSH and run the app
@@ -32,17 +45,19 @@ A minimal Ubuntu-based VPS container with an SSH endpoint and a tiny Node.js app
 
 - Dockerfile
   - Base: ubuntu:22.04
-  - Installs OpenSSH, curl, git, Node.js (18.x)
+  - Installs OpenSSH, curl, git, unzip (unzip kept for installer compatibility), and minimal tools
   - Creates a non-root user `deploy`
   - Exposes 22 and 3000
-  - Copies bootstrap script and app scaffold into the image
+  - Note: Docker VOLUME removed; Railway handles persistence via volumes at runtime
 
 - bootstrap.sh
   - Reads SECRET_DEPLOY_SSH_KEY (your public key content)
-  - Creates /home/deploy/.ssh/authorized_keys with the public key
+  - Creates /home/deploy/.ssh/authorized_keys with the public key (path resolved at runtime to the mount path)
   - Sets permissions for SSH keys
-  - Hardens SSH: PasswordAuthentication no, PermitRootLogin no
+  - Harden SSH: PasswordAuthentication no, PermitRootLogin no
+  - Idempotent Opencode installation guarded by marker in /data (or mounted path)
   - Starts the SSH daemon and the Node.js app (index.js)
+  - Uses RAID/RAILWAY_* env vars for mount path and settings
 
 - index.js
   - Simple HTTP server on port 3000

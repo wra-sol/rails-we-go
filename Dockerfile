@@ -1,14 +1,14 @@
 # filepath: /Users/ladmin/WebProjects/rails-we-go/Dockerfile
-# Minimal Docker VPS with SSH and Node.js app for Railway
+# Minimal Docker VPS with SSH and Node.js app for Railway (Volume-aware)
 FROM ubuntu:22.04
 
 # Non-interactive apt
 ENV DEBIAN_FRONTEND=noninteractive
 
-# Prepare data volume for persistence
-VOLUME ["/data"]
+# Do NOT declare a Dockerfile VOLUME here. Railway will attach a volume at runtime
+# and provide mount path via environment variables: RAILWAY_VOLUME_MOUNT_PATH
 
-# Install SSH, curl, git, unzip (unzip added for installer compatibility), and minimal tools
+# Install SSH, curl, git, unzip (unzip kept for installer compatibility), and minimal tools
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
         openssh-server \
@@ -42,7 +42,7 @@ RUN curl -fsSL https://deb.nodesource.com/setup_18.x | bash - \
     && apt-get install -y nodejs \
     && npm install --prefix /home/deploy
 
-# Ensure the bootstrap handles opencode installation once
+# Use Railway-provided mount path at runtime; default to /data if not set
 ENV OPENCODE_INSTALLED_FLAG /data/.opencode_installed
 
 # Start bootstrap
