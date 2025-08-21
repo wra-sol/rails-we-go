@@ -1,11 +1,12 @@
 #!/bin/bash
 set -e
 
-MARKER="$OPENCODE_INSTALLED_FLAG"
-DATA_DIR="/data"
+# Use Railway-provided mount path, default to /data for compatibility
+DATA_DIR="${RAILWAY_VOLUME_MOUNT_PATH:-/data}"
+MARKER="${DATA_DIR}/.opencode_installed"
 DEploy_HOME="/home/deploy"
 
-# Ensure data dir exists if volume mounted
+# Ensure data dir exists (Railway should mount; this is safe guard)
 mkdir -p "$DATA_DIR"
 mkdir -p "$DATA_DIR/.config"
 
@@ -40,18 +41,16 @@ fi
 
 # 4) Start services
 mkdir -p /var/run/sshd
-/usr/sbin/sshd -D &
+# Start SSH in background so that Docker/Railway can manage the PID
+ /usr/sbin/sshd -D &
 SSH_PID=$!
 
 # Start Node.js app
 cd "$DEploy_HOME"
 PORT="${PORT:-3000}"
 export PORT
-
-# Start the app in the background; opencode may manage tasks, otherwise start the app directly
 if [ -f "/home/deploy/index.js" ]; then
   node index.js > /home/deploy/app.log 2>&1 &
 fi
 
-# Wait forever
 wait $SSH_PID

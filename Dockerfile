@@ -25,6 +25,9 @@ RUN apt-get update \
 RUN useradd -m -s /bin/bash deploy \
     && echo 'deploy ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
 
+# Switch to non-root user for runtime (best practice)
+# We will switch to 'deploy' in bootstrap for runtime tasks; keep root for install steps if needed.
+
 EXPOSE 22 3000
 
 # Bootstrap at startup
